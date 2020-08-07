@@ -4,8 +4,6 @@ import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
 
-import java.util.ArrayList;
-import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.function.Consumer;
@@ -27,10 +25,11 @@ public class ObjectCheckerService {
     public void check(Container container, Report report, Consumer<StoredObject> onNotFound) {
         report.incContainersCheckedCount();
         for (StoredObject object : container.list()) {
-            logger.debug("Checking object: " + object.getName());
             threadPool.submit(() -> {
+                logger.debug("Checking object: " + object.getName());
                 try {
-                    var md5 = object.getEtag();
+                    // we doing any request to swift object and see if this led to exception
+                    object.getEtag();
                     report.incSuccessObjectsCount();
                     logger.debug("Success object check: " + object.getName());
                 } catch (NotFoundException e) {
