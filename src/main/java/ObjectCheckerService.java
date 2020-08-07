@@ -23,11 +23,10 @@ public class ObjectCheckerService {
         final var report = new Report();
         logger.debug("Checking container: " + container.getName());
         report.incContainersCheckedCount();
-        var callable = new ArrayList<Callable<Object>>(container.getCount());
-
+        var tasks = new ArrayList<Callable<Object>>(container.getCount());
         container.list().forEach((final StoredObject object) -> {
             logger.debug("Checking object: " + object.getName());
-            callable.add(Executors.callable(() -> {
+            tasks.add(Executors.callable(() -> {
                 report.incObjectsCheckedCount();
                 try {
                     var md5 = object.getEtag();
@@ -44,7 +43,7 @@ public class ObjectCheckerService {
                 }
             }));
         });
-        pool.invokeAll(callable);
+        pool.invokeAll(tasks);
         return report;
     }
 
