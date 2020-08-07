@@ -4,7 +4,6 @@ import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
 
-
 import java.util.ArrayList;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutorService;
@@ -17,7 +16,7 @@ public class ObjectCheckerService {
     private final static Logger logger = Logger.getLogger(ObjectCheckerService.class);
     private int concurrency = 40;
 
-    final ExecutorService pool = Executors.newFixedThreadPool(concurrency);
+    final ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
 
     public Report check(Container container, Consumer<StoredObject> onNotFound) throws InterruptedException {
         final var report = new Report();
@@ -26,7 +25,7 @@ public class ObjectCheckerService {
         var tasks = new ArrayList<Callable<Object>>(container.getCount());
         for (StoredObject object : container.list()) {
             logger.debug("Checking object: " + object.getName());
-            tasks.add(Executors.callable(() -> {
+            threadPool.submit(() -> {
                 report.incObjectsCheckedCount();
                 try {
                     var md5 = object.getEtag();
@@ -41,9 +40,9 @@ public class ObjectCheckerService {
                     report.incFailedObjectsCount();
                     logger.error("Error check object: " + e.getMessage());
                 }
-            }));
+            });
         }
-        pool.invokeAll(tasks);
+        threadPool.invokeAll(tasks);
         return report;
     }
 
@@ -56,7 +55,6 @@ public class ObjectCheckerService {
     }
 
     public void shutdown() {
-        pool.shutdown();
+        threadPool.shutdown();
     }
-
 }
