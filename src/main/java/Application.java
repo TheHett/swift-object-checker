@@ -11,29 +11,29 @@ public class Application {
     private final static Logger logger = Logger.getLogger(Application.class);
 
     public static void main(String[] args) throws IOException {
-        final var cmd = setupOptions(args);
-        if (cmd == null) {
+        final var commandLine = setupOptions(args);
+        if (commandLine == null) {
             return;
         }
 
         final var swift = new SwiftService();
         final var checker = new ObjectCheckerService();
-        checker.setConcurrency(Integer.parseInt(cmd.getOptionValue("c")));
+        checker.setConcurrency(Integer.parseInt(commandLine.getOptionValue("concurrency")));
 
         final var account = swift.authenticate(
-                cmd.getOptionValue("u"),
-                cmd.getOptionValue("p"),
-                cmd.getOptionValue("a")
+                commandLine.getOptionValue("user"),
+                commandLine.getOptionValue("password"),
+                commandLine.getOptionValue("authUrl")
         );
         final var totalReport = new Report();
 
-        final var logFile = new File(cmd.getOptionValue("l"));
-        if (logFile.exists()) {
-            logger.error("Log " + logFile.getAbsolutePath() + " file already exists");
+        final var log = new File(commandLine.getOptionValue("log"));
+        if (log.exists()) {
+            logger.error("Log " + log.getAbsolutePath() + " file already exists");
             return;
         }
 
-        try (var writer = new PrintWriter(logFile, StandardCharsets.UTF_8)) {
+        try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
             account.list().forEach((final Container container) -> {
                 try {
                     final var report = checker.check(container, (object) -> {
@@ -51,7 +51,7 @@ public class Application {
 
         checker.shutdown();
         logger.info("Ended work: " + totalReport.asString());
-        logger.info("The log was saved to " + logFile.getAbsolutePath());
+        logger.info("The log was saved to " + log.getAbsolutePath());
     }
 
     static private CommandLine setupOptions(String[] args) {
@@ -90,7 +90,7 @@ public class Application {
         );
         options.addOption(Option
                 .builder("l")
-                .longOpt("logName")
+                .longOpt("log")
                 .desc("Output file log name")
                 .hasArg()
                 .required()
@@ -98,14 +98,14 @@ public class Application {
         )
         ;
         final var parser = new DefaultParser();
-        final CommandLine cmd;
+        final CommandLine commandLine;
         try {
-            cmd = parser.parse(options, args);
+            commandLine = parser.parse(options, args);
         } catch (ParseException exp) {
             logger.error("Parsing failed.  Reason: " + exp.getMessage());
             return null;
         }
-        return cmd;
+        return commandLine;
     }
 
 }
