@@ -15,16 +15,20 @@ public class ObjectCheckerService {
 
     private final static Logger logger = Logger.getLogger(ObjectCheckerService.class);
     private int concurrency = 40;
-
     final ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
 
-    public Report check(Container container, Consumer<StoredObject> onNotFound) {
-        final var report = new Report();
+    public ObjectCheckerService() {
+    }
+
+    public ObjectCheckerService(int concurrency) {
+        this.concurrency = concurrency;
+    }
+
+    public void check(Container container, Report report, Consumer<StoredObject> onNotFound) {
         report.incContainersCheckedCount();
         for (StoredObject object : container.list()) {
             logger.debug("Checking object: " + object.getName());
             threadPool.submit(() -> {
-                report.incObjectsCheckedCount();
                 try {
                     var md5 = object.getEtag();
                     report.incSuccessObjectsCount();
@@ -38,17 +42,9 @@ public class ObjectCheckerService {
                     report.incFailedObjectsCount();
                     logger.error("Error check object: " + e.getMessage());
                 }
+                report.incObjectsCheckedCount();
             });
         }
-        return report;
-    }
-
-    public int getConcurrency() {
-        return concurrency;
-    }
-
-    public void setConcurrency(int concurrency) {
-        this.concurrency = concurrency;
     }
 
     public void shutdown() {

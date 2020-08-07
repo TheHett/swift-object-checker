@@ -20,9 +20,15 @@ public class Application {
             return;
         }
 
+        final var log = new File(commandLine.getOptionValue("log"));
+        if (log.exists() && !commandLine.hasOption("replaceLog")) {
+            logger.error("Log " + log.getAbsolutePath() + " file already exists");
+            return;
+        }
+
         final var swift = new SwiftService();
-        final var checker = new ObjectCheckerService();
-        checker.setConcurrency(Integer.parseInt(commandLine.getOptionValue("concurrency")));
+        final var concurrency = Integer.parseInt(commandLine.getOptionValue("concurrency"));
+        final var checker = new ObjectCheckerService(concurrency);
 
         final var account = swift.authenticate(
                 commandLine.getOptionValue("user"),
@@ -30,12 +36,6 @@ public class Application {
                 commandLine.getOptionValue("authUrl")
         );
         final var totalReport = new Report();
-
-        final var log = new File(commandLine.getOptionValue("log"));
-        if (log.exists() && !commandLine.hasOption("replaceLog")) {
-            logger.error("Log " + log.getAbsolutePath() + " file already exists");
-            return;
-        }
 
         try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
             final var pageSize = 100;
@@ -46,12 +46,11 @@ public class Application {
                         paginationMap.getNumberOfPages()
                 ));
                 for (Container container : account.list(paginationMap, page)) {
-                    final var report = checker.check(container, (object) -> {
+                    checker.check(container, totalReport, (object) -> {
                         synchronized (Application.class) {
                             writer.println(container.getName() + "/" + object.getName());
                         }
                     });
-                    totalReport.appendFrom(report);
                 }
                 logger.info("Processed " + page * pageSize + " containers: " + totalReport.asString());
             }
