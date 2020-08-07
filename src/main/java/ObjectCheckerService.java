@@ -24,7 +24,7 @@ public class ObjectCheckerService {
         logger.debug("Checking container: " + container.getName());
         report.incContainersCheckedCount();
         var tasks = new ArrayList<Callable<Object>>(container.getCount());
-        container.list().forEach((final StoredObject object) -> {
+        for (StoredObject object : container.list()) {
             logger.debug("Checking object: " + object.getName());
             tasks.add(Executors.callable(() -> {
                 report.incObjectsCheckedCount();
@@ -42,7 +42,7 @@ public class ObjectCheckerService {
                     logger.error("Error check object: " + e.getMessage());
                 }
             }));
-        });
+        }
         pool.invokeAll(tasks);
         return report;
     }

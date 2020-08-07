@@ -34,7 +34,7 @@ public class Application {
         }
 
         try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
-            account.list().forEach((final Container container) -> {
+            for (Container container : account.list()) {
                 try {
                     final var report = checker.check(container, (object) -> {
                         synchronized (Application.class) {
@@ -43,10 +43,10 @@ public class Application {
                     });
                     totalReport.appendFrom(report);
                 } catch (InterruptedException e) {
-                    logger.error("Error check container: " + e.getMessage(), e);
+                    logger.error("Interruption error: " + e.getMessage(), e);
+                    break;
                 }
-            });
-
+            }
         }
 
         checker.shutdown();
