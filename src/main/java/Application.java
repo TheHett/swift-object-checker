@@ -41,10 +41,6 @@ public class Application {
             final var pageSize = 100;
             var paginationMap = account.getPaginationMap(pageSize);
             for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
-                logger.info(String.format("Processing page %d of %d",
-                        page + 1,
-                        paginationMap.getNumberOfPages()
-                ));
                 for (Container container : account.list(paginationMap, page)) {
                     checker.check(container, totalReport, (object) -> {
                         synchronized (Application.class) {
@@ -52,7 +48,7 @@ public class Application {
                         }
                     });
                 }
-                logger.info("Processed " + page * pageSize + " containers: " + totalReport.asString());
+                logger.info(totalReport.asString());
             }
         }
 
