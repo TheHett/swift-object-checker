@@ -18,11 +18,10 @@ public class ObjectCheckerService {
 
     final ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
 
-    public Report check(Container container, Consumer<StoredObject> onNotFound) throws InterruptedException {
+    public Report check(Container container, Consumer<StoredObject> onNotFound) {
         final var report = new Report();
         logger.debug("Checking container: " + container.getName());
         report.incContainersCheckedCount();
-        var tasks = new ArrayList<Callable<Object>>(container.getCount());
         for (StoredObject object : container.list()) {
             logger.debug("Checking object: " + object.getName());
             threadPool.submit(() -> {
@@ -42,7 +41,6 @@ public class ObjectCheckerService {
                 }
             });
         }
-        threadPool.invokeAll(tasks);
         return report;
     }
 
