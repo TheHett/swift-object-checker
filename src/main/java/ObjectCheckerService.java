@@ -20,7 +20,6 @@ public class ObjectCheckerService {
 
     public Report check(Container container, Consumer<StoredObject> onNotFound) {
         final var report = new Report();
-        logger.debug("Checking container: " + container.getName());
         report.incContainersCheckedCount();
         for (StoredObject object : container.list()) {
             logger.debug("Checking object: " + object.getName());

@@ -38,13 +38,22 @@ public class Application {
         }
 
         try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
-            for (Container container : account.list()) {
-                final var report = checker.check(container, (object) -> {
-                    synchronized (Application.class) {
-                        writer.println(container.getName() + "/" + object.getName());
-                    }
-                });
-                totalReport.appendFrom(report);
+            final var pageSize = 100;
+            var paginationMap = account.getPaginationMap(pageSize);
+            for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
+                logger.info(String.format("Processing page %d of %d",
+                        page + 1,
+                        paginationMap.getNumberOfPages()
+                ));
+                for (Container container : account.list(paginationMap, page)) {
+                    final var report = checker.check(container, (object) -> {
+                        synchronized (Application.class) {
+                            writer.println(container.getName() + "/" + object.getName());
+                        }
+                    });
+                    totalReport.appendFrom(report);
+                }
+                logger.info("Processed " + page * pageSize + " containers: " + totalReport.asString());
             }
         }
 
