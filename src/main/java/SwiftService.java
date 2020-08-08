@@ -28,36 +28,4 @@ public class SwiftService {
         var client = new ClientImpl(config);
         return client.authenticate();
     }
-
-    public void deleteObjects(Account account, File log) throws IOException {
-        try (var reader = new BufferedReader(new FileReader(log))) {
-            String path;
-            while ((path = reader.readLine()) != null) {
-                if (path.isEmpty()) {
-                    continue;
-                }
-                logger.info("Delete object " + path);
-                var slashPos = path.indexOf("/");
-                if (slashPos == -1) {
-                    logger.warn("Invalid object path " + path);
-                    continue;
-                }
-                var container = account.getContainer(path.substring(0, slashPos));
-                if (!container.exists()) {
-                    logger.warn(String.format("Container %s isn't exists", container.getName()));
-                    continue;
-                }
-                var object = container.getObject(path.substring(slashPos + 1));
-                if (!object.exists()) {
-                    try {
-                        object.delete();
-                    } catch (NotFoundException ignoring) {
-                        // the swift will throws this exception when deleting problem objects
-                    } catch (CommandException e) {
-                        logger.warn("Error delete object", e);
-                    }
-                }
-            }
-        }
-    }
 }

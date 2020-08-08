@@ -40,7 +40,7 @@ public class Application {
         if (mode.equals(Application.MODE_COLLECT)) {
             collect(account, log, replaceLog, concurrency);
         } else if (mode.equals(Application.MODE_DELETE)) {
-            swift.deleteObjects(account, log);
+            delete(account, log);
         } else {
             logger.error("Unknown mode (should be collect or delete)");
         }
@@ -67,5 +67,37 @@ public class Application {
 
         logger.info("Ended work: " + totalReport.asString());
         logger.info("The log was saved to " + log.getAbsolutePath());
+    }
+
+    private static void delete(Account account, File log) throws IOException {
+        try (var reader = new BufferedReader(new FileReader(log))) {
+            String path;
+            while ((path = reader.readLine()) != null) {
+                if (path.isEmpty()) {
+                    continue;
+                }
+                logger.info("Delete object " + path);
+                var slashPos = path.indexOf("/");
+                if (slashPos == -1) {
+                    logger.warn("Invalid object path " + path);
+                    continue;
+                }
+                var container = account.getContainer(path.substring(0, slashPos));
+                if (!container.exists()) {
+                    logger.warn(String.format("Container %s isn't exists", container.getName()));
+                    continue;
+                }
+                var object = container.getObject(path.substring(slashPos + 1));
+                if (!object.exists()) {
+                    try {
+                        object.delete();
+                    } catch (NotFoundException ignoring) {
+                        // the swift will throws this exception when deleting problem objects
+                    } catch (CommandException e) {
+                        logger.warn("Error delete object", e);
+                    }
+                }
+            }
+        }
     }
 }
