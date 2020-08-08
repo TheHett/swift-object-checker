@@ -1,112 +1,63 @@
 import org.apache.commons.cli.*;
 import org.apache.log4j.Logger;
-import org.javaswift.joss.model.Container;
+import org.javaswift.joss.exception.CommandException;
+import org.javaswift.joss.exception.NotFoundException;
+import org.javaswift.joss.model.Account;
 
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 
 public class Application {
 
     private final static Logger logger = Logger.getLogger(Application.class);
 
-    public static void main(String[] args) throws IOException {
+    public static final String MODE_COLLECT = "collect";
+    public static final String MODE_DELETE = "delete";
+
+    public static void main(String[] args) throws IOException, InterruptedException {
 
         final CommandLine commandLine;
         try {
-            commandLine = setupOptions(args);
+            commandLine = CommandLineBuilder.build(args);
         } catch (ParseException e) {
-            logger.error("Parsing failed.  Reason: " + e.getMessage());
+            logger.error("Error parsing command arguments: " + e.getMessage());
             return;
         }
 
         final var log = new File(commandLine.getOptionValue("log"));
-        if (log.exists() && !commandLine.hasOption("replaceLog")) {
-            logger.error("Log " + log.getAbsolutePath() + " file already exists");
-            return;
-        }
-
         final var swift = new SwiftService();
-        final var concurrency = Integer.parseInt(commandLine.getOptionValue("concurrency"));
-        final var checker = new ObjectCheckerService(concurrency);
-
+        final var concurrency = Integer.parseInt(commandLine.getOptionValue("concurrency", "10"));
+        final var replaceLog = commandLine.hasOption("replaceLog");
         final var account = swift.authenticate(
                 commandLine.getOptionValue("user"),
                 commandLine.getOptionValue("password"),
                 commandLine.getOptionValue("authUrl")
         );
-        final var totalReport = new Report();
 
-        try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
-            final var pageSize = 100;
-            var paginationMap = account.getPaginationMap(pageSize);
-            for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
-                for (Container container : account.list(paginationMap, page)) {
-                    checker.check(container, totalReport, (object) -> {
-                        synchronized (Application.class) {
-                            writer.println(container.getName() + "/" + object.getName());
-                        }
-                    });
-                }
-                logger.info(totalReport.asString());
-            }
+        final var mode = commandLine.getOptionValue("mode");
+
+        if (mode.equals(Application.MODE_COLLECT)) {
+            collect(account, log, replaceLog, concurrency);
+        } else if (mode.equals(Application.MODE_DELETE)) {
+            swift.deleteObjects(account, log);
+        } else {
+            logger.error("Unknown mode (should be collect or delete)");
         }
+    }
+
+    private static void collect(Account account, File log, boolean replaceLog, int concurrency)
+            throws IOException, InterruptedException {
+
+        if (log.exists() && !replaceLog) {
+            logger.error("Log " + log.getAbsolutePath() + " file already exists");
+            return;
+        }
+
+        final var checker = new ObjectCheckerService(concurrency);
+        final var totalReport = checker.checkAllContainers(account, log);
 
         checker.shutdown();
         logger.info("Ended work: " + totalReport.asString());
         logger.info("The log was saved to " + log.getAbsolutePath());
     }
-
-    static private CommandLine setupOptions(String[] args) throws ParseException {
-        Options options = new Options()
-                .addOption(Option
-                        .builder("u")
-                        .longOpt("user")
-                        .desc("Swift user")
-                        .hasArg()
-                        .required()
-                        .build()
-                )
-                .addOption(Option
-                        .builder("p")
-                        .longOpt("password")
-                        .desc("Swift password")
-                        .hasArg()
-                        .required()
-                        .build()
-                )
-                .addOption(Option
-                        .builder("a")
-                        .longOpt("authUrl")
-                        .desc("Swift auth url")
-                        .hasArg()
-                        .required()
-                        .build()
-                )
-                .addOption(Option
-                        .builder("c")
-                        .longOpt("concurrency")
-                        .desc("Number of parallel threads")
-                        .hasArg()
-                        .required()
-                        .build()
-                )
-                .addOption(Option
-                        .builder("l")
-                        .longOpt("log")
-                        .desc("Output file log name")
-                        .hasArg()
-                        .required()
-                        .build()
-                )
-                .addOption(Option
-                        .builder("r")
-                        .longOpt("replaceLog")
-                        .desc("Replace log file")
-                        .required()
-                        .build()
-                );
-        return new DefaultParser().parse(options, args);
-    }
-
 }
