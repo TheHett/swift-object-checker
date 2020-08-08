@@ -25,6 +25,7 @@ public class ObjectCheckerService {
     }
 
     public void check(Container container, Report report) {
+        logger.debug("Check container {}", container.getName());
         report.incContainersCheckedCount();
         try {
             for (StoredObject object : container.list()) {
@@ -62,7 +63,10 @@ public class ObjectCheckerService {
     public Report checkAllContainers(Account account) {
         final var totalReport = new Report();
         final var pageSize = 100;
+        logger.info("Preparing pagination map...");
         var paginationMap = account.getPaginationMap(pageSize);
+
+        logger.info("Start checking");
         for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
             for (Container container : account.list(paginationMap, page)) {
                 this.check(container, totalReport);
