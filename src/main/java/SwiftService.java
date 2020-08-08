@@ -1,21 +1,16 @@
-import org.apache.log4j.Logger;
 import org.javaswift.joss.client.factory.AccountConfig;
 import org.javaswift.joss.client.factory.AuthenticationMethod;
 import org.javaswift.joss.client.impl.ClientImpl;
-import org.javaswift.joss.exception.CommandException;
-import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Account;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SwiftService {
 
-    private final static Logger logger = Logger.getLogger(SwiftService.class);
+    private final static Logger logger = LoggerFactory.getLogger(SwiftService.class);
 
     public Account authenticate(String username, String password, String authUrl) {
+        logger.debug("Authenticate {} as {}", authUrl, username);
         AccountConfig config = new AccountConfig();
         config.setAuthenticationMethod(AuthenticationMethod.TEMPAUTH);
         config.setUsername(username);

@@ -1,8 +1,9 @@
 import org.apache.commons.cli.*;
-import org.apache.log4j.Logger;
 import org.javaswift.joss.exception.CommandException;
 import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Account;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 
 import java.io.*;
@@ -10,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class Application {
 
-    private final static Logger logger = Logger.getLogger(Application.class);
+    private final static Logger logger = LoggerFactory.getLogger(Application.class);
 
     public static final String MODE_COLLECT = "collect";
     public static final String MODE_DELETE = "delete";
@@ -21,7 +22,7 @@ public class Application {
         try {
             commandLine = CommandLineBuilder.build(args);
         } catch (ParseException e) {
-            logger.error("Error parsing command arguments: " + e.getMessage());
+            logger.error("Error parsing command arguments: {}", e.getMessage());
             return;
         }
 
@@ -50,7 +51,7 @@ public class Application {
             throws IOException, InterruptedException {
 
         if (log.exists() && !replaceLog) {
-            logger.error("Log " + log.getAbsolutePath() + " file already exists");
+            logger.error("Log {} file already exists", log.getAbsolutePath());
             return;
         }
 
@@ -65,8 +66,8 @@ public class Application {
             }
         }
 
-        logger.info("Ended work: " + totalReport.asString());
-        logger.info("The log was saved to " + log.getAbsolutePath());
+        logger.info("Ended work: {}", totalReport.asString());
+        logger.info("The log was saved to {}", log.getAbsolutePath());
     }
 
     private static void delete(Account account, File log) throws IOException {
@@ -76,10 +77,10 @@ public class Application {
                 if (path.isEmpty()) {
                     continue;
                 }
-                logger.info("Delete object " + path);
+                logger.info("Delete object {}", path);
                 var slashPos = path.indexOf("/");
                 if (slashPos == -1) {
-                    logger.warn("Invalid object path " + path);
+                    logger.warn("Invalid object path {}", path);
                     continue;
                 }
                 var container = account.getContainer(path.substring(0, slashPos));

@@ -1,5 +1,3 @@
-import org.javaswift.joss.model.StoredObject;
-
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -67,14 +65,5 @@ public class Report {
                 notFoundObjectsCount,
                 failedCheckObjectsCount
         );
-    }
-
-    public void appendFrom(Report report) {
-        objectsCheckedCount.addAndGet(report.getObjectsCheckedCount());
-        successObjectsCount.addAndGet(report.getSuccessObjectsCount());
-        failedCheckObjectsCount.addAndGet(report.getFailedCheckObjectsCount());
-        notFoundObjectsCount.addAndGet(report.getNotFoundObjectsCount());
-        containersCheckedCount.addAndGet(report.getContainersCheckedCount());
-        notFoundObjects.addAll(report.getNotFoundObjects());
     }
 }

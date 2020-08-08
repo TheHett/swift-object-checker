@@ -1,24 +1,19 @@
-import org.apache.log4j.Logger;
 import org.javaswift.joss.exception.CommandException;
 import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Account;
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.PrintWriter;
-import java.nio.charset.StandardCharsets;
-import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
-import java.util.function.Consumer;
 
 
 public class ObjectCheckerService {
 
-    private final static Logger logger = Logger.getLogger(ObjectCheckerService.class);
+    private final static Logger logger = LoggerFactory.getLogger(ObjectCheckerService.class);
     private int concurrency = 40;
     final ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
 
@@ -34,26 +29,28 @@ public class ObjectCheckerService {
         try {
             for (StoredObject object : container.list()) {
                 threadPool.submit(() -> {
-                    logger.debug("Checking object: " + object.getName());
+                    logger.debug("Checking object: {}", object.getName());
                     try {
-                        // we doing any request to swift object and see if this led to exception
-                        object.getEtag();
-                        report.incSuccessObjectsCount();
-                        logger.debug("Success object check: " + object.getName());
-                    } catch (NotFoundException e) {
-                        report.incNotFoundObjectsCount();
-                        report.getNotFoundObjects().add(container.getName() + "/" + object.getName());
-                        logger.warn("Object not found: " + object.getName());
+                        // this method checks really object existent,
+                        // not just in the container listing
+                        if (object.exists()) {
+                            report.incSuccessObjectsCount();
+                            logger.debug("Success object check: {}", object.getName());
+                        } else {
+                            report.incNotFoundObjectsCount();
+                            report.getNotFoundObjects().add(container.getName() + "/" + object.getName());
+                            logger.warn("Object not found: {}", object.getName());
+                        }
                     } catch (CommandException e) {
                         report.incFailedObjectsCount();
-                        logger.error("Error check object: " + e.getMessage());
+                        logger.error("Error check object: {}", e.getMessage());
                     }
                     report.incObjectsCheckedCount();
                 });
             }
         } catch (CommandException e) {
             // the error occurred when trying to get container listing
-            logger.warn("Error check container " + container.getName(), e);
+            logger.warn("Error check container {}", container.getName(), e);
         }
     }
 
