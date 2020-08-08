@@ -6,6 +6,7 @@ import org.javaswift.joss.model.Account;
 
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 
 public class Application {
 
@@ -54,9 +55,16 @@ public class Application {
         }
 
         final var checker = new ObjectCheckerService(concurrency);
-        final var totalReport = checker.checkAllContainers(account, log);
-
+        final var totalReport = checker.checkAllContainers(account);
         checker.shutdown();
+
+
+        try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
+            for (var objectPath : totalReport.getNotFoundObjects()) {
+                writer.println(objectPath);
+            }
+        }
+
         logger.info("Ended work: " + totalReport.asString());
         logger.info("The log was saved to " + log.getAbsolutePath());
     }

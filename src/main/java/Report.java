@@ -12,7 +12,7 @@ public class Report {
     private final AtomicLong successObjectsCount = new AtomicLong();
     private final AtomicLong failedCheckObjectsCount = new AtomicLong();
     private final AtomicLong notFoundObjectsCount = new AtomicLong();
-    private final Collection<StoredObject> notFoundObjects = Collections.synchronizedList(new ArrayList<>());
+    private final Collection<String> notFoundObjects = Collections.synchronizedList(new ArrayList<>());
 
     public long getContainersCheckedCount() {
         return containersCheckedCount.get();
@@ -54,7 +54,7 @@ public class Report {
         this.notFoundObjectsCount.getAndIncrement();
     }
 
-    public Collection<StoredObject> getNotFoundObjects() {
+    public Collection<String> getNotFoundObjects() {
         return notFoundObjects;
     }
 

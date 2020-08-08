@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.charset.StandardCharsets;
+import java.time.temporal.ChronoUnit;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
@@ -28,7 +29,7 @@ public class ObjectCheckerService {
         this.concurrency = concurrency;
     }
 
-    public void check(Container container, Report report, Consumer<StoredObject> onNotFound) {
+    public void check(Container container, Report report) {
         report.incContainersCheckedCount();
         try {
             for (StoredObject object : container.list()) {
@@ -41,8 +42,7 @@ public class ObjectCheckerService {
                         logger.debug("Success object check: " + object.getName());
                     } catch (NotFoundException e) {
                         report.incNotFoundObjectsCount();
-                        report.getNotFoundObjects().add(object);
-                        onNotFound.accept(object);
+                        report.getNotFoundObjects().add(container.getName() + "/" + object.getName());
                         logger.warn("Object not found: " + object.getName());
                     } catch (CommandException e) {
                         report.incFailedObjectsCount();
@@ -57,26 +57,20 @@ public class ObjectCheckerService {
         }
     }
 
-    public void shutdown() {
+    public void shutdown() throws InterruptedException {
         threadPool.shutdown();
+        threadPool.awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    public Report checkAllContainers(Account account, File log) throws IOException, InterruptedException {
+    public Report checkAllContainers(Account account) {
         final var totalReport = new Report();
-        try (var writer = new PrintWriter(log, StandardCharsets.UTF_8)) {
-            final var pageSize = 100;
-            var paginationMap = account.getPaginationMap(pageSize);
-            for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
-                for (Container container : account.list(paginationMap, page)) {
-                    this.check(container, totalReport, (object) -> {
-                        synchronized (Application.class) {
-                            writer.println(container.getName() + "/" + object.getName());
-                        }
-                    });
-                }
-                logger.info(totalReport.asString());
+        final var pageSize = 100;
+        var paginationMap = account.getPaginationMap(pageSize);
+        for (int page = 0; page < paginationMap.getNumberOfPages(); page++) {
+            for (Container container : account.list(paginationMap, page)) {
+                this.check(container, totalReport);
             }
-            threadPool.awaitTermination(5, TimeUnit.SECONDS);
+            logger.info(totalReport.asString());
         }
         return totalReport;
     }
