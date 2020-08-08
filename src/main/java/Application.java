@@ -98,7 +98,8 @@ public class Application {
                         .hasArg()
                         .required()
                         .build()
-                ).addOption(Option
+                )
+                .addOption(Option
                         .builder("r")
                         .longOpt("replaceLog")
                         .desc("Replace log file")
