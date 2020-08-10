@@ -6,16 +6,18 @@ import org.javaswift.joss.model.StoredObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.TimeUnit;
+import java.util.Queue;
+import java.util.concurrent.*;
 
 
 public class ObjectCheckerService {
 
     private final static Logger logger = LoggerFactory.getLogger(ObjectCheckerService.class);
     private int concurrency = 40;
-    final ExecutorService threadPool = Executors.newFixedThreadPool(concurrency);
+    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
+
+    final ExecutorService threadPool =
+            new ThreadPoolExecutor(concurrency, concurrency, 0L, TimeUnit.MILLISECONDS, taskQueue);
 
     public ObjectCheckerService() {
     }
@@ -24,11 +26,16 @@ public class ObjectCheckerService {
         this.concurrency = concurrency;
     }
 
-    public void check(Container container, Report report) {
+    public void check(Container container, Report report) throws InterruptedException {
         logger.debug("Check container {}", container.getName());
         report.incContainersCheckedCount();
         try {
             for (StoredObject object : container.list()) {
+                // the next code block prevents thread-pool queue overflow
+                while (taskQueue.size() > 10_000) {
+                    logger.debug("The queue is too big, doing sleep");
+                    Thread.sleep(100);
+                }
                 threadPool.submit(() -> {
                     logger.debug("Checking object: {}", object.getName());
                     try {
@@ -60,7 +67,7 @@ public class ObjectCheckerService {
         threadPool.awaitTermination(5, TimeUnit.SECONDS);
     }
 
-    public Report checkAllContainers(Account account) {
+    public Report checkAllContainers(Account account) throws InterruptedException {
         final var totalReport = new Report();
         final var pageSize = 100;
         logger.info("Preparing pagination map...");
