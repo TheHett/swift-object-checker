@@ -1,29 +1,21 @@
 import org.javaswift.joss.exception.CommandException;
-import org.javaswift.joss.exception.NotFoundException;
 import org.javaswift.joss.model.Account;
 import org.javaswift.joss.model.Container;
 import org.javaswift.joss.model.StoredObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.Queue;
 import java.util.concurrent.*;
-
 
 public class ObjectCheckerService {
 
     private final static Logger logger = LoggerFactory.getLogger(ObjectCheckerService.class);
-    private int concurrency = 40;
+
     private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
-
-    final ExecutorService threadPool =
-            new ThreadPoolExecutor(concurrency, concurrency, 0L, TimeUnit.MILLISECONDS, taskQueue);
-
-    public ObjectCheckerService() {
-    }
+    private final ExecutorService threadPool;
 
     public ObjectCheckerService(int concurrency) {
-        this.concurrency = concurrency;
+        threadPool = new ThreadPoolExecutor(concurrency, concurrency, 0L, TimeUnit.MILLISECONDS, taskQueue);
     }
 
     public void check(Container container, Report report) throws InterruptedException {
