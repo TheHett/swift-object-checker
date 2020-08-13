@@ -77,7 +77,7 @@ public class Application {
                 if (path.isEmpty()) {
                     continue;
                 }
-                logger.info("Delete object {}", path);
+                logger.info("Deleting object {}", path);
                 var slashPos = path.indexOf("/");
                 if (slashPos == -1) {
                     logger.warn("Invalid object path {}", path);
@@ -97,6 +97,8 @@ public class Application {
                     } catch (CommandException e) {
                         logger.warn("Error delete object", e);
                     }
+                } else {
+                    logger.warn("The object {} is exists, the deletion skipped", path);
                 }
             }
         }
