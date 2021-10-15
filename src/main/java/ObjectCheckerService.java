@@ -10,12 +10,16 @@ import java.util.concurrent.*;
 public class ObjectCheckerService {
 
     private final static Logger logger = LoggerFactory.getLogger(ObjectCheckerService.class);
-
-    private final BlockingQueue<Runnable> taskQueue = new LinkedBlockingQueue<>();
     private final ExecutorService threadPool;
 
     public ObjectCheckerService(int concurrency) {
-        threadPool = new ThreadPoolExecutor(concurrency, concurrency, 0L, TimeUnit.MILLISECONDS, taskQueue);
+        threadPool = new ThreadPoolExecutor(
+                concurrency,
+                concurrency,
+                0L,
+                TimeUnit.MILLISECONDS,
+                new LinkedBlockingQueue<>(10_000)
+        );
     }
 
     public void check(Container container, Report report) throws InterruptedException {
@@ -23,11 +27,6 @@ public class ObjectCheckerService {
         report.incContainersCheckedCount();
         try {
             for (StoredObject object : container.list()) {
-                // the next code block prevents thread-pool queue overflow
-                while (taskQueue.size() > 10_000) {
-                    logger.debug("The queue is too big, doing sleep");
-                    Thread.sleep(100);
-                }
                 threadPool.submit(() -> {
                     logger.debug("Checking object: {}", object.getName());
                     try {
