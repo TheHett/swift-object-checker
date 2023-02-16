@@ -10,7 +10,7 @@ import java.util.concurrent.*;
 public class ObjectCheckerService {
 
     private final static Logger logger = LoggerFactory.getLogger(ObjectCheckerService.class);
-    private final ExecutorService threadPool;
+    private final ThreadPoolExecutor threadPool;
 
     public ObjectCheckerService(int concurrency) {
         threadPool = new ThreadPoolExecutor(
@@ -20,9 +20,17 @@ public class ObjectCheckerService {
                 TimeUnit.MILLISECONDS,
                 new LinkedBlockingQueue<>(10_000)
         );
+        // https://stackoverflow.com/questions/3446011/threadpoolexecutor-block-when-its-queue-is-full
+        threadPool.setRejectedExecutionHandler((r, executor) -> {
+            try {
+                executor.getQueue().put(r);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        });
     }
 
-    public void check(Container container, Report report) throws InterruptedException {
+    public void check(Container container, Report report) {
         logger.debug("Check container {}", container.getName());
         report.incContainersCheckedCount();
         try {
@@ -54,8 +62,9 @@ public class ObjectCheckerService {
     }
 
     public void shutdown() throws InterruptedException {
+        logger.debug("Stopping thread pool executor");
         threadPool.shutdown();
-        threadPool.awaitTermination(5, TimeUnit.SECONDS);
+        threadPool.awaitTermination(5, TimeUnit.MINUTES);
     }
 
     public Report checkAllContainers(Account account) throws InterruptedException {
